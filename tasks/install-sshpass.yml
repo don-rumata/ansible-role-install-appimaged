@@ -1,0 +1,15 @@
+---
+# Нужная штука, если надо будет использовать модуль "synchronize" даже если без ssh. В 2.7 было не надо, а в 2.9 уже без этого пакета в rc 32 выбивает.
+- name: Install sshpass 4 Linux
+  when:
+    - ansible_system == 'Linux'
+  become: yes
+  block:
+    - package:
+        name:
+          - sshpass
+        state: present
+  tags:
+    - linux
+    - ssh
+    - sshpass

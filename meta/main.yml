@@ -1,0 +1,44 @@
+---
+galaxy_info:
+  author: don Rumata
+  description: Install [Appimaged](https://docs.appimage.org/introduction/software-overview.html#appimaged) 4 any Linux
+  company: localhost
+
+  license: Apache License, Version 2.0
+
+  min_ansible_version: 2.9
+
+  platforms:
+    - name: Fedora
+      versions:
+        - 35
+    - name: Ubuntu
+      versions:
+        - jammy
+        - bionic
+        - focal
+    - name: Debian
+      version:
+        - buster
+        - bullseye
+        - stable
+        - oldstable
+    - name: EL
+      versions:
+        - 8
+    - name: opensuse
+      vesrion:
+        - 15.3
+        - tumbleweed
+
+  galaxy_tags:
+    - linux
+    - ubuntu
+    - debian
+    - centos
+    - fedora
+    - opensuse
+    - appimaged
+    - appimage
+
+  dependencies: []

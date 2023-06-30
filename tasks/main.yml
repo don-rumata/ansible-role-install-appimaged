@@ -1,0 +1,159 @@
+---
+# https://stackoverflow.com/a/52112477
+- name: Get the facts
+  when:
+    - ansible_system == 'Linux'
+    - appimaged_full_uri_path is defined
+  become: yes
+  block:
+    # http or https
+    - set_fact:
+        appimaged_uri_protocol_fact: http
+      when: appimaged_full_uri_path is search('^http')
+    - set_fact:
+        appimaged_uri_protocol_fact: rsync
+      when: appimaged_full_uri_path is search('^rsync')
+
+- name: Preconfig Appimaged 4 any Linux
+  when: ansible_system == 'Linux'
+  become: yes
+  block:
+    - file:
+        path: "{{ appimaged_full_path_to_install | dirname }}"
+        state: directory
+
+- name: Get the download link for Appimeged from Github 4 any Linux
+  when:
+    - ansible_system == 'Linux'
+    - appimaged_full_uri_path is not defined
+  become: yes
+  block:
+    - uri:
+        url: https://api.github.com/repos/probonopd/go-appimage/releases
+        method: GET
+        return_content: yes
+      register: appimaged_github_api_status
+    - set_fact:
+        appimaged_github_api_download_url_fact:
+          "{{ appimaged_github_api_status.json
+          | to_json | from_json
+          | json_query(query_appimaged_github_api_download_url) }}"
+      vars:
+        query_appimaged_github_api_download_url:
+          "[].assets[].browser_download_url
+          | [?contains(@, 'appimaged')]
+          | [?contains(@, `{{ ansible_architecture }}`)]
+          | [? ! contains(@, 'zsync')]
+          | [0]"
+    - set_fact:
+        appimaged_full_uri_path: "{{ appimaged_github_api_download_url_fact }}"
+        appimaged_uri_protocol_fact: http
+
+- name: Install Appimaged over {{ appimaged_uri_protocol_fact }} 4 any Linux
+  when:
+    - ansible_system == 'Linux'
+    - appimaged_uri_protocol_fact is defined
+    - appimaged_uri_protocol_fact == 'http'
+  become: yes
+  block:
+    - get_url:
+        url: "{{ appimaged_full_uri_path }}"
+        dest: "{{ appimaged_full_path_to_install }}"
+        mode: '755'
+
+- name: Install Appimaged over {{ appimaged_uri_protocol_fact }} 4 any Linux
+  when:
+    - ansible_system == 'Linux'
+    - appimaged_uri_protocol_fact is defined
+    - appimaged_uri_protocol_fact == 'rsync'
+  become: yes
+  block:
+    - import_tasks: install-sshpass.yml
+    - synchronize:
+        src: "{{ appimaged_full_uri_path }}"
+        dest: "{{ appimaged_full_path_to_install | dirname }}/"
+        # archive: no
+        copy_links: no
+        compress: no
+        rsync_opts:
+          - "--no-motd"
+          - "--update"
+      delegate_to: "{{ inventory_hostname }}"
+
+- name: Postconfig Appimaged 4 any Linux
+  when: ansible_system == 'Linux'
+  become: yes
+  block:
+    - file:
+        src: "{{ appimaged_full_path_to_install }}"
+        dest: /usr/local/bin/appimaged
+        state: link
+
+- name: Install Appimaged service 4 any Linux
+  when:
+    - ansible_system == 'Linux'
+    - appimaged_autostart == true
+  become: yes
+  block:
+    - file:
+        path: /etc/xdg/autostart
+        state: directory
+        owner: root
+        group: root
+        mode: '755'
+    - copy:
+        dest: /etc/xdg/autostart/appimaged.desktop
+        content: |
+          [Desktop Entry]
+          Encoding=UTF-8
+          # Version=0.9.4
+          Type=Application
+          Name=Run Appimaged
+          Comment=Run install appimaged 4 current user
+          Exec=/usr/local/bin/appimaged {{ appimaged_opt }}
+          RunHook=0
+          StartupNotify=false
+          Terminal=false
+          Hidden=false
+        mode: '644'
+
+- name: Create symlinks 4 Appimaged software 4 any Linux
+  when:
+    - ansible_system == 'Linux'
+    - appimaged_create_symlinks_to_desktop == true
+  become: yes
+  block:
+    - copy:
+        dest: /etc/xdg/autostart/create-symlinks-to-desktop-for-appimages.desktop
+        content: |
+          [Desktop Entry]
+          Encoding=UTF-8
+          # Version=0.9.4
+          Type=Application
+          Name=Create symlinks to desktop for appimages
+          Comment=Simulate C:\Users\Public\Desktop\ for .desktop files.
+          Exec=/usr/local/bin/create-symlinks-to-desktop-for-appimages.sh
+          RunHook=0
+          StartupNotify=false
+          Terminal=false
+          Hidden=false
+        mode: '644'
+    - copy:
+        dest: /usr/local/bin/create-symlinks-to-desktop-for-appimages.sh
+        content: |
+          #!/usr/bin/env bash
+
+          # https://wiki.archlinux.org/title/XDG_user_directories_(%D0%A0%D1%83%D1%81%D1%81%D0%BA%D0%B8%D0%B9)#%D0%A1%D0%BE%D0%B7%D0%B4%D0%B0%D0%BD%D0%B8%D0%B5_%D0%BA%D0%B0%D1%82%D0%B0%D0%BB%D0%BE%D0%B3%D0%BE%D0%B2_%D0%BF%D0%BE_%D1%83%D0%BC%D0%BE%D0%BB%D1%87%D0%B0%D0%BD%D0%B8%D1%8E
+          xdg-user-dirs-update
+
+          # https://manpages.ubuntu.com/manpages/jammy/en/man5/user-dirs.dirs.5.html
+          source "$HOME/.config/user-dirs.dirs" || exit 1
+          # ln -s $HOME/.local/share/applications/*.desktop "$XDG_DESKTOP_DIR"/
+          ln -s $HOME/.local/share/applications/appimagekit_*.desktop "$XDG_DESKTOP_DIR"/ || exit 1
+
+          # Задержка и chmod нужны, потому что при каждом залогинивании пользователя appimaged меняет права своих файлов .desktop на 644, из-за чего невозможно их запустить сразу по дабл клику. 10 секунд взяты от балды.
+          sleep 10
+          chmod 755 $HOME/.local/share/applications/appimagekit_*.desktop
+          cd "$XDG_DESKTOP_DIR" || exit 1
+          symlinks -d ./
+        mode: '755'

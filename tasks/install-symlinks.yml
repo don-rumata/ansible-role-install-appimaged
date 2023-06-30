@@ -1,0 +1,15 @@
+---
+# https://repology.org/project/symlinks/versions
+- name: Install symlinks 4 Linux
+  when:
+    - ansible_system == 'Linux'
+  become: yes
+  block:
+    - package:
+        name:
+          - symlinks
+        state: present
+  tags:
+    - linux
+    - ssh
+    - symlinks

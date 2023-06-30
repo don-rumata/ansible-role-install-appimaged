@@ -1,0 +1,16 @@
+---
+# https://unix.stackexchange.com/a/4187
+appimaged_full_path_to_install: /usr/local/bin/appimaged-latest-x86_64.AppImage
+
+# Create /etc/xdg/autostart/appimaged.desktop
+appimaged_autostart: true
+
+# ln -s $HOME/.local/share/applications/appimagekit_*.desktop "$XDG_DESKTOP_DIR"/
+appimaged_create_symlinks_to_desktop: true
+
+# Help Options. appimaged --help
+appimaged_opt: -q
+
+# If the key is not defined, the latest version will be downloaded from github (https://github.com/probonopd/go-appimage)
+# appimaged_full_uri_path: rsync://10.10.10.10/soft/appimaged/appimaged-latest-x86_64.AppImage
+# appimaged_full_uri_path: http://10.10.10.10/soft/appimaged/appimaged-latest-x86_64.AppImage
