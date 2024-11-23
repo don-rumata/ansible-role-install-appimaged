@@ -3,7 +3,7 @@
 - name: Install sshpass 4 Linux
   when:
     - ansible_system == 'Linux'
-  become: yes
+  become: true
   block:
     - package:
         name:

@@ -4,7 +4,7 @@
   when:
     - ansible_system == 'Linux'
     - appimaged_full_uri_path is defined
-  become: yes
+  become: true
   block:
     # http or https
     - set_fact:
@@ -16,7 +16,7 @@
 
 - name: Preconfig Appimaged 4 any Linux
   when: ansible_system == 'Linux'
-  become: yes
+  become: true
   block:
     - file:
         path: "{{ appimaged_full_path_to_install | dirname }}"
@@ -26,12 +26,12 @@
   when:
     - ansible_system == 'Linux'
     - appimaged_full_uri_path is not defined
-  become: yes
+  become: true
   block:
     - uri:
         url: https://api.github.com/repos/probonopd/go-appimage/releases
         method: GET
-        return_content: yes
+        return_content: true
       register: appimaged_github_api_status
     - set_fact:
         appimaged_github_api_download_url_fact:
@@ -54,7 +54,7 @@
     - ansible_system == 'Linux'
     - appimaged_uri_protocol_fact is defined
     - appimaged_uri_protocol_fact == 'http'
-  become: yes
+  become: true
   block:
     - get_url:
         url: "{{ appimaged_full_uri_path }}"
@@ -66,15 +66,15 @@
     - ansible_system == 'Linux'
     - appimaged_uri_protocol_fact is defined
     - appimaged_uri_protocol_fact == 'rsync'
-  become: yes
+  become: true
   block:
     - import_tasks: install-sshpass.yml
     - synchronize:
         src: "{{ appimaged_full_uri_path }}"
         dest: "{{ appimaged_full_path_to_install | dirname }}/"
-        # archive: no
-        copy_links: no
-        compress: no
+        # archive: false
+        copy_links: false
+        compress: false
         rsync_opts:
           - "--no-motd"
           - "--update"
@@ -82,7 +82,7 @@
 
 - name: Postconfig Appimaged 4 any Linux
   when: ansible_system == 'Linux'
-  become: yes
+  become: true
   block:
     - file:
         src: "{{ appimaged_full_path_to_install }}"
@@ -93,7 +93,7 @@
   when:
     - ansible_system == 'Linux'
     - appimaged_autostart == true
-  become: yes
+  become: true
   block:
     - file:
         path: /etc/xdg/autostart
@@ -121,7 +121,7 @@
   when:
     - ansible_system == 'Linux'
     - appimaged_create_symlinks_to_desktop == true
-  become: yes
+  become: true
   block:
     - copy:
         dest: /etc/xdg/autostart/create-symlinks-to-desktop-for-appimages.desktop
